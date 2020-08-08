@@ -7,6 +7,7 @@ import 'emoji_picker.dart';
 class TextComposer extends StatefulWidget {
   final TextEditingController controller;
   final void Function(String) onSend;
+  final Function mediaPicker;
 
   ///default rows = 6
   final int rows;
@@ -23,6 +24,7 @@ class TextComposer extends StatefulWidget {
     this.rows: 6,
     this.columns: 9,
     this.color,
+    this.mediaPicker,
   }) : super(key: key);
 
   @override
@@ -30,7 +32,7 @@ class TextComposer extends StatefulWidget {
 }
 
 class _TextComposerState extends State<TextComposer> {
-  TextEditingController _controller = new TextEditingController();
+  TextEditingController _controller;
 
   bool showEmoji = false;
 
@@ -237,11 +239,7 @@ class _TextComposerState extends State<TextComposer> {
             ),
           ),
           new Container(
-            child: new IconButton(
-                icon: new Icon(Icons.photo_camera),
-                onPressed: () {
-                  // getImage(_controller.text);
-                }),
+            child: new IconButton(icon: new Icon(Icons.photo_camera), onPressed: widget.mediaPicker),
           ),
           new Container(
             //margin: new EdgeInsets.symmetric(horizontal: 2.0),
