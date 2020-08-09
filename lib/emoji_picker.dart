@@ -327,7 +327,7 @@ class _EmojiPickerState extends State<EmojiPicker> {
     final prefs = await SharedPreferences.getInstance();
     final key = "recents";
     getRecentEmojis().then((_) {
-      print("adding emoji");
+      // print("adding emoji");
       setState(() {
         if (!recentEmojis.contains(emoji.name)) recentEmojis.add(emoji.name);
         prefs.setStringList(key, recentEmojis.sublist(0, min(widget.rows * widget.columns, recentEmojis.length)));

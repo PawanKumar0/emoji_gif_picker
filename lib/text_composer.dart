@@ -92,8 +92,8 @@ class _TextComposerState extends State<TextComposer> {
 
   @override
   dispose() {
-    _nodeText.dispose();
-    _controller.dispose();
+    _nodeText?.dispose();
+    _controller?.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -202,7 +202,7 @@ class _TextComposerState extends State<TextComposer> {
 
   Widget _buildTextComposer() {
     return new Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+        padding: const EdgeInsets.all(4.0),
         margin: const EdgeInsets.symmetric(horizontal: 4.0),
         decoration: new BoxDecoration(color: Colors.blueGrey[50], borderRadius: const BorderRadius.all(const Radius.circular(24.0))),
         constraints: BoxConstraints(maxHeight: 104.0),
