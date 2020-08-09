@@ -17,6 +17,8 @@ class TextComposer extends StatefulWidget {
 
   final Color color;
 
+  final String hintText;
+
   const TextComposer({
     Key key,
     this.controller,
@@ -25,6 +27,7 @@ class TextComposer extends StatefulWidget {
     this.columns: 9,
     this.color,
     this.mediaPicker,
+    this.hintText,
   }) : super(key: key);
 
   @override
@@ -93,7 +96,7 @@ class _TextComposerState extends State<TextComposer> {
   @override
   dispose() {
     _nodeText?.dispose();
-    _controller?.dispose();
+    if (widget.controller != null) _controller?.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -168,8 +171,8 @@ class _TextComposerState extends State<TextComposer> {
                                               .toList(),
                                         );
                                       });
-                                case 2:
-                                  return Text('Pick a voice..');
+                                // case 2:
+                                //   return Text('Pick a voice..');
                                 default:
                                   return SizedBox.shrink();
                               }
@@ -179,7 +182,7 @@ class _TextComposerState extends State<TextComposer> {
                         SizedBox(height: 8),
                         PageIndicator(
                           controller: _pageController,
-                          itemCount: 3,
+                          itemCount: 2,
                           color: widget.color,
                           onPageSelected: (int page) {
                             _pageController.animateToPage(
@@ -234,7 +237,7 @@ class _TextComposerState extends State<TextComposer> {
               // onChanged: _parseContent,
               focusNode: _nodeText,
               decoration: new InputDecoration.collapsed(
-                hintText: "Send a message",
+                hintText: widget.hintText ?? "Send a message",
               ),
             ),
           ),
