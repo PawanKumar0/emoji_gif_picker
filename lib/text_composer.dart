@@ -3,10 +3,13 @@ import 'package:emoji_picker/page_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:giphy_client/giphy_client.dart';
 import 'emoji_picker.dart';
+import 'package:keyboard_visibility/keyboard_visibility.dart';
 
 class TextComposer extends StatefulWidget {
   final TextEditingController controller;
   final void Function(String) onSend;
+  final void Function(String) onSelectGif;
+  final Future<GiphyCollection> Function({bool reload}) getGifData;
   final Function mediaPicker;
 
   ///default rows = 6
@@ -28,6 +31,8 @@ class TextComposer extends StatefulWidget {
     this.color,
     this.mediaPicker,
     this.hintText,
+    this.onSelectGif,
+    this.getGifData,
   }) : super(key: key);
 
   @override
@@ -53,6 +58,8 @@ class _TextComposerState extends State<TextComposer> {
 
   final client = new GiphyClient(apiKey: 'bJx9xBfgsln73Susl7ozNOJlj370WrFz');
   GiphyCollection collection;
+
+  bool keyboardVisible = false;
 
   @override
   initState() {
@@ -80,6 +87,18 @@ class _TextComposerState extends State<TextComposer> {
         _cursorPosition = _controller.selection.baseOffset;
       }
     });
+
+    KeyboardVisibilityNotification().addNewListener(
+      onChange: (bool visible) {
+        if (showEmoji) {
+          setState(() {
+            keyboardVisible = visible;
+          });
+        } else {
+          keyboardVisible = visible;
+        }
+      },
+    );
   }
 
   @override
@@ -88,7 +107,8 @@ class _TextComposerState extends State<TextComposer> {
   }
 
   Future<GiphyCollection> _getGifData({bool reload: false}) async {
-    if (reload || collection == null) collection = await client.trending(offset: 1, limit: 500, rating: GiphyRating.pg);
+    if (reload || collection == null)
+      collection = await (widget.getGifData(reload: false) ?? client.trending(offset: 1, limit: 1000, rating: GiphyRating.pg));
 
     return collection;
   }
@@ -110,94 +130,93 @@ class _TextComposerState extends State<TextComposer> {
         children: <Widget>[
           _buildTextComposer(),
           Visibility(
-              visible: showEmoji,
-              child: FutureBuilder(
-                  future: Future.delayed(Duration(milliseconds: 100)),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) return SizedBox.shrink();
+              visible: showEmoji && !keyboardVisible,
+              child: Column(
+                children: <Widget>[
+                  SizedBox(
+                    height: (MediaQuery.of(context).size.width / widget.columns) * widget.rows + 60,
+                    child: PageView.builder(
+                      controller: _pageController,
+                      itemBuilder: (_, page) {
+                        switch (page) {
+                          case 0:
+                            return EmojiPicker(
+                              rows: widget.rows,
+                              columns: widget.columns,
+                              // recommendKeywords: ["racing", "horse"],
+                              numRecommended: 10,
+                              onEmojiSelected: (emoji, category) {
+                                _controller.text = _controller.text.substring(0, _cursorPosition) +
+                                    emoji.emoji +
+                                    _controller.text.substring(_cursorPosition);
 
-                    return Column(
-                      children: <Widget>[
-                        SizedBox(
-                          height: (MediaQuery.of(context).size.width / widget.columns) * widget.rows + 60,
-                          child: PageView.builder(
-                            controller: _pageController,
-                            itemBuilder: (_, page) {
-                              switch (page) {
-                                case 0:
-                                  return EmojiPicker(
-                                    rows: widget.rows,
-                                    columns: widget.columns,
-                                    // recommendKeywords: ["racing", "horse"],
-                                    numRecommended: 10,
-                                    onEmojiSelected: (emoji, category) {
-                                      _controller.text = _controller.text.substring(0, _cursorPosition) +
-                                          emoji.emoji +
-                                          _controller.text.substring(_cursorPosition);
-
-                                      _cursorPosition += emoji.emoji.length;
-                                      _controller.selection = TextSelection.fromPosition(TextPosition(offset: _cursorPosition));
-                                    },
-                                  );
-
-                                case 1:
-                                  return FutureBuilder<GiphyCollection>(
-                                      future: _getGifData(),
-                                      builder: (context, snapshot) {
-                                        if (snapshot?.data == null || snapshot.connectionState != ConnectionState.done)
-                                          return Center(
-                                            child: CircularProgressIndicator(),
-                                          );
-                                        final _gifs = snapshot.data;
-
-                                        return GridView.count(
-                                          crossAxisCount: 2,
-                                          primary: false,
-                                          children: _gifs.data
-                                              .where((gif) => gif?.images?.fixedHeight?.url != null)
-                                              .map((gif) => Padding(
-                                                    padding: const EdgeInsets.all(4.0),
-                                                    child: CachedNetworkImage(
-                                                      height: 200,
-                                                      fit: BoxFit.cover,
-                                                      imageUrl: gif.images.fixedHeight.url,
-                                                      httpHeaders: {'accept': 'image/*'},
-                                                      errorWidget: (_, __, ___) => Text(gif.images.previewGif.url ?? __),
-                                                      placeholder: (_, __) => Center(
-                                                        child: CircularProgressIndicator(),
-                                                      ),
-                                                    ),
-                                                  ))
-                                              .toList(),
-                                        );
-                                      });
-                                // case 2:
-                                //   return Text('Pick a voice..');
-                                default:
-                                  return SizedBox.shrink();
-                              }
-                            },
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        PageIndicator(
-                          controller: _pageController,
-                          itemCount: 2,
-                          color: widget.color,
-                          onPageSelected: (int page) {
-                            _pageController.animateToPage(
-                              page,
-                              duration: _kDuration,
-                              curve: _kCurve,
+                                _cursorPosition += emoji.emoji.length;
+                                _controller.selection = TextSelection.fromPosition(TextPosition(offset: _cursorPosition));
+                              },
                             );
-                          },
-                        ),
-                        // SizedBox(
-                        //   height: 8,
-                        // )
-                      ],
-                    );
-                  })),
+
+                          case 1:
+                            return FutureBuilder<GiphyCollection>(
+                                future: _getGifData(),
+                                builder: (context, snapshot) {
+                                  if (snapshot?.data == null || snapshot.connectionState != ConnectionState.done)
+                                    return Center(
+                                      child: CircularProgressIndicator(),
+                                    );
+                                  final _gifs = snapshot.data;
+
+                                  return GridView.count(
+                                    crossAxisCount: 2,
+                                    primary: false,
+                                    children: _gifs.data
+                                        .where((gif) => gif?.images?.fixedHeightDownsampled?.url != null)
+                                        .map((gif) => GestureDetector(
+                                              onTap: () {
+                                                widget.onSelectGif(gif.images.fixedHeightDownsampled.url);
+                                              },
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(4.0),
+                                                child: CachedNetworkImage(
+                                                  height: 200,
+                                                  fit: BoxFit.cover,
+                                                  imageUrl: gif.images.fixedHeightDownsampled.url,
+                                                  httpHeaders: {'accept': 'image/*'},
+                                                  errorWidget: (_, __, ___) => Text(gif.images.previewGif.url ?? __),
+                                                  placeholder: (_, __) => Center(
+                                                    child: CircularProgressIndicator(),
+                                                  ),
+                                                ),
+                                              ),
+                                            ))
+                                        .toList(),
+                                  );
+                                });
+                          // case 2:
+                          //   return Text('Pick a voice..');
+                          default:
+                            return SizedBox.shrink();
+                        }
+                      },
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  PageIndicator(
+                    controller: _pageController,
+                    itemCount: 2,
+                    color: widget.color,
+                    onPageSelected: (int page) {
+                      _pageController.animateToPage(
+                        page,
+                        duration: _kDuration,
+                        curve: _kCurve,
+                      );
+                    },
+                  ),
+                  // SizedBox(
+                  //   height: 8,
+                  // )
+                ],
+              )),
         ],
       ),
     );

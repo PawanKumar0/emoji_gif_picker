@@ -335,28 +335,29 @@ class _EmojiPickerState extends State<EmojiPicker> {
     });
   }
 
-  Future<Map<String, String>> getAvailableEmojis(Map<String, String> map) async {
+  Map<String, String> getAvailableEmojis(Map<String, String> map) {
     Map<String, String> newMap = Map<String, String>();
 
     for (String key in map.keys) {
-      bool isAvailable = await _isEmojiAvailable(map[key]);
-      if (isAvailable) {
-        newMap[key] = map[key];
-      }
+      newMap[key] = map[key];
+      // bool isAvailable = await _isEmojiAvailable(map[key]);
+      // if (isAvailable) {
+      //   newMap[key] = map[key];
+      // }
     }
 
     return newMap;
   }
 
   Future updateEmojis() async {
-    smileyMap = await getAvailableEmojis(emojiList.smileys);
-    animalMap = await getAvailableEmojis(emojiList.animals);
-    foodMap = await getAvailableEmojis(emojiList.foods);
-    travelMap = await getAvailableEmojis(emojiList.travel);
-    activityMap = await getAvailableEmojis(emojiList.activities);
-    objectMap = await getAvailableEmojis(emojiList.objects);
-    symbolMap = await getAvailableEmojis(emojiList.symbols);
-    flagMap = await getAvailableEmojis(emojiList.flags);
+    smileyMap = getAvailableEmojis(emojiList.smileys);
+    animalMap = getAvailableEmojis(emojiList.animals);
+    foodMap = getAvailableEmojis(emojiList.foods);
+    travelMap = getAvailableEmojis(emojiList.travel);
+    activityMap = getAvailableEmojis(emojiList.activities);
+    objectMap = getAvailableEmojis(emojiList.objects);
+    symbolMap = getAvailableEmojis(emojiList.symbols);
+    flagMap = getAvailableEmojis(emojiList.flags);
 
     allNames.addAll(smileyMap.keys);
     allNames.addAll(animalMap.keys);
