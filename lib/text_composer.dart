@@ -107,8 +107,11 @@ class _TextComposerState extends State<TextComposer> {
   }
 
   Future<GiphyCollection> _getGifData({bool reload: false}) async {
-    if (reload || collection == null)
-      collection = await (widget.getGifData(reload: false) ?? client.trending(offset: 1, limit: 1000, rating: GiphyRating.pg));
+    if (reload || collection == null) if (widget.getGifData != null) {
+      collection = await widget.getGifData(reload: reload);
+    } else {
+      collection = await client.trending(offset: 1, limit: 1000, rating: GiphyRating.pg);
+    }
 
     return collection;
   }
