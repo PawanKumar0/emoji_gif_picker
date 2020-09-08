@@ -1,14 +1,24 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:emoji_picker/page_indicator.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:giphy_client/giphy_client.dart';
 import 'emoji_picker.dart';
 import 'package:keyboard_visibility/keyboard_visibility.dart';
 
+import 'models/user_tag.dart';
+
 class TextComposer extends StatefulWidget {
   final TextEditingController controller;
+  final Map<String, UserTag> userTags;
   final void Function(String) onSend;
   final void Function(String) onSelectGif;
+  final bool Function(String) validTag;
+  final void Function(String) onChanged;
+  final Widget Function(BuildContext, UserTag) userTagBuilder;
+  final Future<Iterable<UserTag>> Function(String) getSuggestions;
+  final void Function(UserTag) onSuggestionSelected;
   final Future<GiphyCollection> Function({bool reload}) getGifData;
   final Function mediaPicker;
 
@@ -33,6 +43,12 @@ class TextComposer extends StatefulWidget {
     this.hintText,
     this.onSelectGif,
     this.getGifData,
+    this.validTag,
+    this.onChanged,
+    this.userTagBuilder,
+    this.getSuggestions,
+    this.onSuggestionSelected,
+    this.userTags: const {},
   }) : super(key: key);
 
   @override
@@ -60,6 +76,8 @@ class _TextComposerState extends State<TextComposer> {
   GiphyCollection collection;
 
   bool keyboardVisible = false;
+
+  final GlobalKey _textKey = new GlobalKey();
 
   @override
   initState() {
@@ -238,30 +256,77 @@ class _TextComposerState extends State<TextComposer> {
               // focusColor: Colors.transparent,
               highlightColor: Colors.transparent,
               onPressed: () {
-                // _nodeText.unfocus();
-
                 setState(() {
                   showEmoji = !showEmoji;
                 });
 
                 if (!showEmoji) {
                   _nodeText.requestFocus();
+                } else {
+                  _nodeText.unfocus();
                 }
               }),
           new Flexible(
-            child: new TextField(
-              textCapitalization: TextCapitalization.sentences,
-              keyboardType: TextInputType.multiline,
-              maxLines: null,
-              controller: _controller,
-              readOnly: showEmoji,
-              showCursor: true,
-              // onChanged: _parseContent,
-              focusNode: _nodeText,
-              decoration: new InputDecoration.collapsed(
-                hintText: widget.hintText ?? "Send a message",
+            child: new Container(
+                child: new TypeAheadField<UserTag>(
+              key: _textKey,
+              hideOnError: true,
+              hideOnEmpty: true,
+              direction: AxisDirection.up,
+              textFieldConfiguration: TextFieldConfiguration(
+                textDirection: TextDirection.ltr,
+                focusNode: _nodeText,
+                controller: _controller,
+                maxLines: null,
+                onChanged: widget.onChanged,
+                textCapitalization: TextCapitalization.sentences,
+                keyboardType: TextInputType.multiline,
+                decoration: new InputDecoration(border: InputBorder.none, hintText: widget.hintText ?? 'What\'s on your mind?'),
+                inputFormatters: [
+                  UserTagTextInputFormatter(
+                    validTag: widget.validTag,
+                    removeTag: (int start) {
+                      // widget.userTags.remove(start.toString());
+                    },
+                    getTag: (String tag) {
+                      return widget.userTags.keys.firstWhere((key) => key.contains(tag), orElse: () => null);
+                    },
+                  )
+                ],
               ),
-            ),
+              suggestionsCallback: widget.getSuggestions,
+              itemBuilder: widget.userTagBuilder,
+              onSuggestionSelected: (suggestion) {
+                final selection = _controller.value.selection;
+                final text = _controller.value.text;
+                final before = selection.textBefore(text).split(new RegExp(r"[ \n]+")).last;
+                final after = selection.textAfter(text).split(new RegExp(r"[ \n]+")).first;
+                final start = selection.baseOffset - before.length;
+                final end = selection.baseOffset + after.length;
+
+                _controller.text = _controller.text.replaceRange(start, end, suggestion.tag + " ");
+                _controller.selection = TextSelection.collapsed(offset: end);
+
+                widget.userTags.putIfAbsent(suggestion.tag, () => suggestion);
+                if (widget.onSuggestionSelected != null) widget.onSuggestionSelected(suggestion);
+              },
+            )),
+
+            // child: Container(
+            //   child: new TextField(
+            //     textCapitalization: TextCapitalization.sentences,
+            //     keyboardType: TextInputType.multiline,
+            //     maxLines: null,
+            //     controller: _controller,
+            //     readOnly: showEmoji,
+            //     showCursor: true,
+            //     // onChanged: _parseContent,
+            //     focusNode: _nodeText,
+            //     decoration: new InputDecoration.collapsed(
+            //       hintText: widget.hintText ?? "Send a message",
+            //     ),
+            //   ),
+            // ),
           ),
           new Container(
             child: new IconButton(icon: new Icon(Icons.photo_camera), onPressed: widget.mediaPicker),
@@ -279,5 +344,45 @@ class _TextComposerState extends State<TextComposer> {
                 }),
           ),
         ]));
+  }
+}
+
+class UserTagTextInputFormatter extends TextInputFormatter {
+  final Function(int) removeTag;
+  final Function(String) validTag;
+  final String Function(String tag) getTag;
+  UserTagTextInputFormatter({
+    this.removeTag,
+    this.getTag,
+    this.validTag,
+  });
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final newselection = newValue.selection;
+    final newtext = newValue.text;
+    final newbefore = newselection.textBefore(newtext).split(new RegExp(r"[ \n]+")).last;
+    final newafter = newselection.textAfter(newtext).split(new RegExp(r"[ \n]+")).first;
+    final newstart = newselection.baseOffset - newbefore.length;
+    final newend = newselection.baseOffset + newafter.length;
+    final newword = newbefore + newafter;
+
+    final oldselection = oldValue.selection;
+    final oldtext = oldValue.text;
+    final oldbefore = oldselection.textBefore(oldtext).split(new RegExp(r"[ \n]+")).last;
+    final selected = oldselection.textInside(oldtext).trim();
+    final oldafter = oldselection.textAfter(oldtext).split(new RegExp(r"[ \n]+")).first;
+    final oldword = oldbefore + selected + oldafter;
+
+    if (validTag(oldword) && getTag(oldword) != null && !newword.contains(oldword)) {
+      removeTag(newstart);
+      return newValue.copyWith(text: newtext.replaceRange(newstart, newend, ''), selection: TextSelection.collapsed(offset: newstart));
+    }
+
+    // if (Validations.validTag(newword) && getTag(newword) != null) {
+    //   return newValue.copyWith(text: newtext.replaceRange(newstart, newend, ''));
+    // }
+
+    return newValue;
   }
 }

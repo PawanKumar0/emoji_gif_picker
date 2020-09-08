@@ -3,6 +3,7 @@ import 'package:emoji_picker/emoji_picker.dart';
 import 'package:keyboard_actions/keyboard_actions.dart';
 import 'package:bubble/bubble.dart';
 import 'package:emoji_picker/text_composer.dart';
+import 'package:emoji_picker/models/user_tag.dart';
 
 void main() => runApp(MainApp());
 
@@ -43,6 +44,8 @@ class _ContentState extends State<Content> {
   int _cursorPosition = -1;
 
   List<String> _text = new List();
+
+  Map<String, UserTag> _userTags = Map();
 
   @override
   initState() {
@@ -130,6 +133,12 @@ class _ContentState extends State<Content> {
         //   ],
         // ),
         TextComposer(
+          getSuggestions: getSuggestions,
+          userTagBuilder: itemBuilder,
+          userTags: _userTags,
+          validTag: (String tag) {
+            return new RegExp(r'^@[a-zA-Z0-9_@-\\(\\)]+').hasMatch(tag);
+          },
           onSend: (text) {
             setState(() {
               _text.add(text);
@@ -137,6 +146,28 @@ class _ContentState extends State<Content> {
           },
         )
       ],
+    );
+  }
+
+  Future<Iterable<UserTag>> getSuggestions(String val) async {
+    if (val.startsWith('@'))
+      return [1, 2, 3].map(
+        (t) => UserTag(
+          uid: t.toString(),
+          cid: t.toString(),
+          email: "adsa" + t.toString(),
+          name: val.split('@').last + t.toString(),
+        ),
+      );
+
+    return null;
+  }
+
+  Widget itemBuilder(BuildContext _, UserTag user) {
+    return ListTile(
+      leading: Icon(Icons.person),
+      title: Text(user.name),
+      subtitle: Text(user.companyName ?? ''),
     );
   }
 
