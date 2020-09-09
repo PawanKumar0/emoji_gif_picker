@@ -133,12 +133,12 @@ class _ContentState extends State<Content> {
         //   ],
         // ),
         TextComposer(
-          getSuggestions: getSuggestions,
-          userTagBuilder: itemBuilder,
-          userTags: _userTags,
-          validTag: (String tag) {
-            return new RegExp(r'^@[a-zA-Z0-9_@-\\(\\)]+').hasMatch(tag);
-          },
+          // getSuggestions: getSuggestions,
+          // userTagBuilder: itemBuilder,
+          // userTags: _userTags,
+          // validTag: (String tag) {
+          //   return new RegExp(r'^@[a-zA-Z0-9_@-\\(\\)]+').hasMatch(tag);
+          // },
           onSend: (text) {
             setState(() {
               _text.add(text);

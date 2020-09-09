@@ -45,8 +45,8 @@ class TextComposer extends StatefulWidget {
     this.getGifData,
     this.validTag,
     this.onChanged,
-    this.userTagBuilder,
-    this.getSuggestions,
+    this.userTagBuilder: emptyWidget,
+    this.getSuggestions: emptyFuture,
     this.onSuggestionSelected,
     this.userTags: const {},
   }) : super(key: key);
@@ -272,6 +272,7 @@ class _TextComposerState extends State<TextComposer> {
               key: _textKey,
               hideOnError: true,
               hideOnEmpty: true,
+              hideOnLoading: true,
               direction: AxisDirection.up,
               textFieldConfiguration: TextFieldConfiguration(
                 textDirection: TextDirection.ltr,
@@ -347,6 +348,12 @@ class _TextComposerState extends State<TextComposer> {
   }
 }
 
+Future<Null> emptyFuture([dynamic a, dynamic b]) async {
+  return null;
+}
+
+Widget emptyWidget(BuildContext _, UserTag __) => SizedBox.shrink();
+
 class UserTagTextInputFormatter extends TextInputFormatter {
   final Function(int) removeTag;
   final Function(String) validTag;
@@ -374,7 +381,7 @@ class UserTagTextInputFormatter extends TextInputFormatter {
     final oldafter = oldselection.textAfter(oldtext).split(new RegExp(r"[ \n]+")).first;
     final oldword = oldbefore + selected + oldafter;
 
-    if (validTag(oldword) && getTag(oldword) != null && !newword.contains(oldword)) {
+    if (validTag != null && validTag(oldword) && getTag(oldword) != null && !newword.contains(oldword)) {
       removeTag(newstart);
       return newValue.copyWith(text: newtext.replaceRange(newstart, newend, ''), selection: TextSelection.collapsed(offset: newstart));
     }
